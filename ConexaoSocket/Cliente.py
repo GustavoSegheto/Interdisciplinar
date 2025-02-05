@@ -2,7 +2,8 @@ import socket
 import cv2
 import numpy as np
 from ultralytics import YOLO
-import json  # Para enviar dados estruturados
+import json 
+import struct
 
 # Carregar modelo YOLOv8
 model = YOLO("yolov8n.pt")
@@ -48,10 +49,14 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
     # Processar imagem
     detected_objects = detect_objects(image_path)
 
-    # Converter para JSON e enviar para o servidor
-    data_str = json.dumps(detected_objects) + "\n"  # JSON formatado como string
-    client_socket.sendall(data_str.encode())
+    # Converter JSON para string e pegar o tamanho
+    data_str = json.dumps(detected_objects)
+    data_bytes = data_str.encode()
+    length_prefix = struct.pack("!I", len(data_bytes))  # Prefixo de 4 bytes com o tamanho
 
+    # Enviar tamanho + dados
+    client_socket.sendall(length_prefix + data_bytes)
+    
     # Fechar o socket
     client_socket.shutdown(socket.SHUT_WR)
     client_socket.close()

@@ -3,6 +3,7 @@ package Servidor;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 public class Server {
 
@@ -20,8 +21,7 @@ public class Server {
 
                 // Converte a imagem para bytes e envia
                 byte[] imageBytes = new byte[(int) imageFile.length()];
-                try (FileInputStream fis = new FileInputStream(imageFile); 
-                     BufferedOutputStream bos = new BufferedOutputStream(socket.getOutputStream())) {
+                try (FileInputStream fis = new FileInputStream(imageFile); BufferedOutputStream bos = new BufferedOutputStream(socket.getOutputStream())) {
                     fis.read(imageBytes);
                     bos.write(imageBytes);
                     bos.flush(); // Garante que a imagem foi enviada completamente
@@ -29,16 +29,17 @@ public class Server {
 
                 System.out.println("Imagem enviada, aguardando resposta...");
 
-                // Receber JSON do cliente
-                StringBuilder receivedData = new StringBuilder();
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        receivedData.append(line);
-                    }
-                }
+                // Ler os primeiros 4 bytes para saber o tamanho do JSON
+                InputStream inputStream = socket.getInputStream();
+                DataInputStream dataInputStream = new DataInputStream(inputStream);
+                int jsonLength = dataInputStream.readInt(); // Lê 4 bytes indicando o tamanho
 
-                System.out.println("Objetos detectados recebidos: " + receivedData.toString());
+                // Agora ler exatamente 'jsonLength' bytes do JSON
+                byte[] jsonData = new byte[jsonLength];
+                dataInputStream.readFully(jsonData); // Garante que lemos tudo
+
+                String receivedJson = new String(jsonData, StandardCharsets.UTF_8);
+                System.out.println("Objetos detectados recebidos: " + receivedJson);
 
                 socket.close();
                 System.out.println("Conexão encerrada com o cliente.");
